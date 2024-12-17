@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  web_camera_stream:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILDPLATFORM: linux/arm64
+    platform: linux/arm64
+    container_name: web_camera_stream
+    ports:
+      - "443:443"
+    volumes:
+      - ./static:/app/static
+      - ./camera_config.yml:/app/camera_config.yml
+      - ./static/recordings:/app/static/recordings
+      - ./certs:/app/certs:ro
+    environment:
+      FLASK_ENV: development
+      LOG_LEVEL: DEBUG
+      CAMERA_USERNAME: ${CAMERA_USERNAME}
+      CAMERA_PASSWORD: ${CAMERA_PASSWORD}
+      SECRET_KEY: ${SECRET_KEY}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      SSL_CERT_PATH: /app/certs/cert.pem
+      SSL_KEY_PATH: /app/certs/key.pem
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-k", "https://localhost:443/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: "arm64v8/redis:alpine"
+    platform: linux/arm64
+    container_name: redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  video_storage:
+    build:
+      context: ./storage
+      dockerfile: Dockerfile
+      args:
+        BUILDPLATFORM: linux/arm64
+    platform: linux/arm64
+    container_name: video_storage
+    volumes:
+      - ./static/recordings:/videos
+    restart: unless-stopped

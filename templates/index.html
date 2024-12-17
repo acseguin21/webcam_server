@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surveillance System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pvi/P621/1S1bOvoAyyzO3yOvg/DrBw7LyFVjL0LkTWXkLZU3zhZgrEerEkXyIlUP3pSX3CUDf6tN+DYXgY5qg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="system-title">
+                    <h1>GoldenEye Surveillance</h1>
+                    <span class="classification">LEVEL: TOP SECRET</span>
+                </div>
+                <div class="header-controls">
+                    <a href="{{ url_for('settings') }}" class="control-button settings">System Control</a>
+                    <a href="{{ url_for('logout') }}" class="control-button logout">Terminate</a>
+                </div>
+            </div>
+            <div class="status-ribbon">
+                <div class="status-item">
+                    <span class="status-label">Container Status:</span>
+                    <span class="status-indicator" id="containerStatus">🍏</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Camera Connections:</span>
+                    <span class="status-indicator" id="cameraStatus">🍏</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Threat Level:</span>
+                    <span class="status-indicator" id="threatLevel">🍏</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Frame Rate:</span>
+                    <span class="status-indicator" id="frameRate">📊</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Stream Rate:</span>
+                    <span class="status-indicator" id="streamRate">📈</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Signal Strength:</span>
+                    <span class="status-indicator" id="signalStrength">📶</span>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div class="grid-container">
+                {% for camera in cameras %}
+                <div class="camera-container" onclick="openFullScreen('{{ url_for('video_feed', camera_id=loop.index0) }}', {{ loop.index0 }})">
+                    <div class="camera-frame">
+                        <img src="{{ url_for('video_feed', camera_id=loop.index0) }}" alt="Video Feed">
+                        <div class="overlay">
+                            <div class="camera-info">
+                                <span class="timestamp">LIVE</span>
+                                <span class="camera-id">{{ camera.name }}</span>
+                            </div>
+                            <div class="crosshair">
+                                <div class="corner corner-tl"></div>
+                                <div class="corner corner-tr"></div>
+                                <div class="corner corner-bl"></div>
+                                <div class="corner corner-br"></div>
+                                <div class="range-indicator range-top">50m</div>
+                                <div class="range-indicator range-bottom">100m</div>
+                                <div class="range-indicator range-left">75m</div>
+                                <div class="range-indicator range-right">125m</div>
+                            </div>
+                            <div class="camera-controls">
+                                <div class="control-group">
+                                    <button class="record-button" onclick="event.stopPropagation(); toggleRecording({{ loop.index0 }})">
+                                        <span class="record-icon"></span>
+                                        REC
+                                    </button>
+                                    <span class="record-status" id="recordStatus{{ loop.index0 }}">STANDBY</span>
+                                </div>
+                                <div class="control-group">
+                                    <select class="quality-select" onchange="event.stopPropagation(); setQuality({{ loop.index0 }}, this.value)">
+                                        <option value="high">HIGH</option>
+                                        <option value="medium">MED</option>
+                                        <option value="low">LOW</option>
+                                    </select>
+                                    <span class="duration" id="recordDuration{{ loop.index0 }}">00:00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+
+        <footer>
+            <div class="system-info">
+                <span>SYSTEM OPERATIONAL</span>
+                <span class="pulse"></span>
+            </div>
+        </footer>
+
+        <!-- Stoplight-style Ribbon -->
+        <div class="status-ribbon">
+            <div class="status-item">
+                <span class="status-label">Container Status:</span>
+                <span class="status-indicator" id="containerStatus">🍏</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Camera Connections:</span>
+                <span class="status-indicator" id="cameraStatus">🍏</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Threat Level:</span>
+                <span class="status-indicator" id="threatLevel">🍏</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Frame Rate:</span>
+                <span class="status-indicator" id="frameRate">📊</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Stream Rate:</span>
+                <span class="status-indicator" id="streamRate">📈</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Signal Strength:</span>
+                <span class="status-indicator" id="signalStrength">📶</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="full-screen" id="fullScreenContainer">
+        <button class="back-button" onclick="closeFullScreen()">Back</button>
+        <img id="fullScreenImage" src="" alt="Full Screen Video Feed">
+        
+        <!-- PTZ Controls in Full-Screen Mode -->
+        <div class="ptz-controls" id="ptzControls">
+            <div class="ptz-pad">
+                <button class="ptz-up">⬆️</button>
+                <button class="ptz-down">⬇️</button>
+                <button class="ptz-left">⬅️</button>
+                <button class="ptz-right">➡️</button>
+            </div>
+            <div class="zoom-controls">
+                <button class="zoom-in">🔍+</button>
+                <button class="zoom-out">🔍-</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Menu -->
+    <div class="settings-menu" id="settingsMenu">
+        <h2>Camera Control Center</h2>
+        <div class="settings-grid">
+            <div class="settings-section">
+                <h3>Recording Settings</h3>
+                <div class="setting-group">
+                    <label for="recordLength">Record Length (minutes)</label>
+                    <input type="range" id="recordLength" min="1" max="60" value="10">
+                    <span class="setting-value" id="recordLengthValue">10</span>
+                </div>
+                <div class="setting-group">
+                    <label for="fileSize">Max File Size (MB)</label>
+                    <input type="range" id="fileSize" min="10" max="1000" value="100">
+                    <span class="setting-value" id="fileSizeValue">100</span>
+                </div>
+                <div class="setting-group">
+                    <label for="autoRecord">Auto Record</label>
+                    <label class="switch">
+                        <input type="checkbox" id="autoRecord">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h3>Video Settings</h3>
+                <div class="setting-group">
+                    <label for="quality">Quality</label>
+                    <select id="quality">
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="fps">Frame Rate</label>
+                    <select id="fps">
+                        <option value="30">30 FPS</option>
+                        <option value="24">24 FPS</option>
+                        <option value="15">15 FPS</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="settings-actions">
+            <button onclick="applySettings()" class="apply-btn">Apply Settings</button>
+            <button onclick="toggleSettingsMenu()" class="cancel-btn">Close</button>
+        </div>
+    </div>
+
+    <!-- Recordings Menu -->
+    <div class="recordings-menu" id="recordingsMenu" style="display: none;">
+        <h2>Recorded Videos</h2>
+        <ul id="recordingsList"></ul>
+        <button onclick="toggleRecordingsMenu()">Close</button>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+</body>
+</html>
